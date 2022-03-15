@@ -5,6 +5,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log.d
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -21,27 +22,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mnowo.photofilter.feature_edit.EditEvent
 import com.mnowo.photofilter.feature_edit.EditViewModel
 
 @Composable
 fun EditScreen(viewModel: EditViewModel = hiltViewModel()) {
 
+
     var imageUrl by remember {
         mutableStateOf<Uri?>(null)
     }
     val context = LocalContext.current
-    val bitmap = remember {
-        mutableStateOf<Bitmap?>(null)
-    }
+
 
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
         imageUrl = uri
     }
 
     imageUrl?.let {
         val source = ImageDecoder.createSource(context.contentResolver, it)
-        bitmap.value = ImageDecoder.decodeBitmap(source)
+        viewModel.setPictureBitmap(
+            ImageDecoder.decodeBitmap(source).copy(Bitmap.Config.RGBA_F16, true)
+        )
     }
 
     Scaffold {
@@ -58,37 +62,33 @@ fun EditScreen(viewModel: EditViewModel = hiltViewModel()) {
             }
             Spacer(modifier = Modifier.padding(vertical = 20.dp))
 
-            bitmap.value?.let {
-                Image(bitmap = it.asImageBitmap(),
+            viewModel.pictureBitmap.value?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
                     contentDescription = "",
                     modifier = Modifier
-                        .requiredWidth(200.dp)
-                        .requiredHeight(200.dp)
+                        .requiredWidth(300.dp)
+                        .requiredHeight(400.dp)
                 )
-            }
+                Spacer(modifier = Modifier.padding(vertical = 20.dp))
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Button(onClick = {
+                        viewModel.onEvent(EditEvent.RedFilter(it))
+                    }) {
+                        Text(text = "Red filter")
+                    }
+                    Button(onClick = { }) {
+                        Text(text = "Green filter")
+                    }
 
+                    Button(onClick = { }) {
+                        Text(text = "Blue filter")
+                    }
+                }
+            }
         }
     }
-}
-
-@Composable
-fun ImagePicker() : Bitmap? {
-    var imageUrl by remember {
-        mutableStateOf<Uri?>(null)
-    }
-    val context = LocalContext.current
-    val bitmap = remember {
-        mutableStateOf<Bitmap?>(null)
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        imageUrl = uri
-    }
-
-    imageUrl?.let {
-        val source = ImageDecoder.createSource(context.contentResolver, it)
-        bitmap.value = ImageDecoder.decodeBitmap(source)
-    }
-    return bitmap.value
 }
